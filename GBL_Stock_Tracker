@@ -1,10 +1,9 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-  <title>GBL_Stock_Tracker_ERP - Inventory & Batch Management</title>
+  <title>GBL_Stock_Tracker ERP - Inventory & Batch Management</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -2004,4 +2003,3 @@
   </script>
 </body>
 </html>
-```
