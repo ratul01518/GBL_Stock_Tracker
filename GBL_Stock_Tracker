@@ -1,0 +1,2007 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>GBL_Stock_Tracker_ERP - Inventory & Batch Management</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- html2canvas for High-Res Gallery Image Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f3f4f8;
+      color: #111827;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Custom Scrollbar for horizontal tables on mobile */
+    .table-scroll::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .table-scroll::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .table-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    /* Exact Reference Stock Summary Sheet Styling */
+    .summary-sheet-container {
+      background-color: #d6d8dc;
+      color: #111827;
+      font-family: 'Inter', Arial, sans-serif;
+    }
+    .summary-sheet-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1.5px solid #2b2d30;
+    }
+    .summary-sheet-table th,
+    .summary-sheet-table td {
+      border: 1px solid #3f4246;
+      padding: 6px 10px;
+      vertical-align: middle;
+    }
+    .summary-sheet-table th {
+      font-weight: 600;
+      font-size: 12px;
+      text-align: left;
+      background-color: #cfd2d6;
+      color: #111827;
+    }
+    .summary-group-border-top {
+      border-top: 2px solid #1f2937 !important;
+    }
+    .status-all-ok {
+      color: #1b5e20;
+      font-weight: 600;
+    }
+    .status-filling-ok {
+      color: #2e7d32;
+      font-weight: 600;
+    }
+    .status-pen {
+      color: #b45309;
+      font-weight: 600;
+    }
+    .status-running {
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+    .status-hold {
+      color: #b91c1c;
+      font-weight: 600;
+    }
+
+    /* Print / PDF A4 Optimization */
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .print-area {
+        box-shadow: none !important;
+        border: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col pb-20 md:pb-8">
+
+  <!-- Top App Header -->
+  <header class="no-print sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-3 shadow-xs">
+    <div class="max-w-5xl mx-auto flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigateTo('home')">
+        <div class="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-lg shadow-xs">
+          T
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Tizma Web ERP</h1>
+          <p class="text-[11px] text-slate-500 font-medium">Offline Batch & Inventory System</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <button onclick="navigateTo('search')" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1.5 text-xs font-semibold" title="Global Search">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Search</span>
+        </button>
+        <button onclick="navigateTo('summary')" class="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition flex items-center gap-1.5 text-xs font-semibold" title="Stock Summary Sheet">
+          <i data-lucide="image" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Stock Sheet</span>
+        </button>
+        <button onclick="navigateTo('backup')" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1.5 text-xs font-semibold" title="Backup & Restore">
+          <i data-lucide="database-backup" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Backup</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast / Message Banner (No alert() used anywhere) -->
+  <div id="toastContainer" class="no-print fixed bottom-20 md:bottom-6 right-4 left-4 md:left-auto md:w-96 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-5 pt-4 sm:pt-6">
+
+    <!-- ==================== 1. HOME / DASHBOARD VIEW ==================== -->
+    <section id="view-home" class="space-y-6">
+      <!-- Exact 2x2 Summary Card Grid matching Reference Image 1 -->
+      <div class="grid grid-cols-2 gap-3 sm:gap-4">
+        <!-- Card 1: Total Products -->
+        <div onclick="navigateTo('register')" class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-6 shadow-xs hover:shadow-md transition cursor-pointer active:scale-[0.99]">
+          <p class="text-base sm:text-xl font-medium text-slate-900 tracking-tight">Total Products</p>
+          <p id="dash-total-products" class="text-2xl sm:text-4xl font-bold text-slate-900 mt-2 sm:mt-3">0</p>
+          <p class="text-[11px] text-slate-400 mt-1">Overall Stock (pcs)</p>
+        </div>
+
+        <!-- Card 2: Total ready for delivery -->
+        <div onclick="navigateTo('register')" class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-6 shadow-xs hover:shadow-md transition cursor-pointer active:scale-[0.99]">
+          <p class="text-sm sm:text-lg font-medium text-slate-900 tracking-tight">Total ready for delivery</p>
+          <p id="dash-total-ready" class="text-2xl sm:text-4xl font-bold text-slate-900 mt-2 sm:mt-3">0</p>
+          <p class="text-[11px] text-emerald-600 font-medium mt-1">All OK Stock</p>
+        </div>
+
+        <!-- Card 3: Total Pen -->
+        <div onclick="navigateTo('register')" class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-6 shadow-xs hover:shadow-md transition cursor-pointer active:scale-[0.99]">
+          <p class="text-base sm:text-xl font-medium text-slate-900 tracking-tight">Total Pen</p>
+          <p id="dash-total-pen" class="text-2xl sm:text-4xl font-bold text-slate-900 mt-2 sm:mt-3">0</p>
+          <p class="text-[11px] text-amber-600 font-medium mt-1">Pen Stock</p>
+        </div>
+
+        <!-- Card 4: Total Filled -->
+        <div onclick="navigateTo('register')" class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-6 shadow-xs hover:shadow-md transition cursor-pointer active:scale-[0.99]">
+          <p class="text-base sm:text-xl font-medium text-slate-900 tracking-tight">Total Filled</p>
+          <p id="dash-total-filled" class="text-2xl sm:text-4xl font-bold text-slate-900 mt-2 sm:mt-3">0</p>
+          <p class="text-[11px] text-blue-600 font-medium mt-1">Filling OK Stock</p>
+        </div>
+      </div>
+
+      <!-- Quick Search Bar on Home -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-3 shadow-xs">
+        <div class="relative flex items-center">
+          <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-3.5"></i>
+          <input 
+            type="text" 
+            id="homeQuickSearch" 
+            placeholder="Quick search Batch No, Strength (2.5mg-15mg), Challan, Hidden Code..." 
+            class="w-full pl-11 pr-20 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition"
+            onkeydown="if(event.key==='Enter') triggerHomeSearch()"
+          />
+          <button onclick="triggerHomeSearch()" class="absolute right-2 bg-slate-900 text-white text-xs font-semibold px-3.5 py-2 rounded-lg hover:bg-slate-800 transition">
+            Find
+          </button>
+        </div>
+      </div>
+
+      <!-- ERP Modules Menu Grid -->
+      <div>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 px-1">ERP Modules & Registers</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          
+          <!-- Module 1: Stock Register -->
+          <button onclick="navigateTo('register')" class="text-left bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-xs transition flex items-start gap-3.5 group">
+            <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+              <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">Stock Register</h3>
+              <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Manage all batches, edit quantities, Ready/Pen/Filled stocks, Status & Remarks.</p>
+            </div>
+          </button>
+
+          <!-- Module 2: Stock Summary Sheet (Gallery Image View) -->
+          <button onclick="navigateTo('summary')" class="text-left bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-xs transition flex items-start gap-3.5 group">
+            <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+              <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">Stock Summary Sheet</h3>
+              <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Grouped Tizma stock sheet, save as PNG to phone gallery, PDF print & WhatsApp share.</p>
+            </div>
+          </button>
+
+          <!-- Module 3: Delivery Challan -->
+          <button onclick="navigateTo('challan')" class="text-left bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-xs transition flex items-start gap-3.5 group">
+            <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+              <i data-lucide="truck" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">Delivery Challan</h3>
+              <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Create challan, upload invoice/challan photo, auto-deduct stock & archive records.</p>
+            </div>
+          </button>
+
+          <!-- Module 4: Hidden Code Authorization -->
+          <button onclick="navigateTo('hiddencode')" class="text-left bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-xs transition flex items-start gap-3.5 group">
+            <div class="w-11 h-11 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+              <i data-lucide="shield-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">Hidden Code Authorization</h3>
+              <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">First/Last Hidden Code, Sticker Serial Numbers, Gap & Total Sticker Used calculator.</p>
+            </div>
+          </button>
+
+          <!-- Module 5: Global Search -->
+          <button onclick="navigateTo('search')" class="text-left bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-xs transition flex items-start gap-3.5 group">
+            <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+              <i data-lucide="search-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">Global Search</h3>
+              <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Instant lookup by Batch No, MG/Strength, Hidden Code, Serial No or Challan No.</p>
+            </div>
+          </button>
+
+          <!-- Module 6: Backup & Restore -->
+          <button onclick="navigateTo('backup')" class="text-left bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-xs transition flex items-start gap-3.5 group">
+            <div class="w-11 h-11 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+              <i data-lucide="hard-drive-download" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">Backup & Restore</h3>
+              <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">Save full database JSON to phone storage, restore backup or reset sample data.</p>
+            </div>
+          </button>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 2. STOCK SUMMARY SHEET (IMAGE / GALLERY VIEW) ==================== -->
+    <section id="view-summary" class="hidden space-y-4">
+      <!-- Action Toolbar -->
+      <div class="no-print bg-white rounded-2xl border border-slate-200 p-3.5 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
+        <div class="flex items-center gap-2">
+          <button onclick="navigateTo('home')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Stock Account Summary Sheet</h2>
+            <p class="text-xs text-slate-500">Save as Image to Phone Gallery, Print PDF or Share</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <button onclick="downloadSummaryAsImage()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Save Image (Gallery)</span>
+          </button>
+          <button onclick="shareSummaryWhatsApp()" class="flex-1 sm:flex-none bg-[#25D366] hover:bg-[#1ebe5d] text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
+            <span>WhatsApp Share</span>
+          </button>
+          <button onclick="printSection('summary-capture-area')" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>PDF / Print</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Exact Reference Image Table Layout -->
+      <div class="overflow-x-auto table-scroll rounded-xl shadow-md">
+        <div id="summary-capture-area" class="summary-sheet-container print-area p-3 sm:p-5 min-w-[600px]">
+          <!-- Optional subtle header with date stamp for gallery image clarity -->
+          <div class="flex items-center justify-between mb-2 px-1">
+            <span class="text-xs font-bold tracking-wide text-slate-800 uppercase">Tizma Stock Report</span>
+            <span id="summary-date-stamp" class="text-[11px] font-medium text-slate-700"></span>
+          </div>
+
+          <table class="summary-sheet-table text-xs sm:text-sm">
+            <thead>
+              <tr>
+                <th class="w-[22%]">Strength</th>
+                <th class="w-[16%]">Batch No.</th>
+                <th class="w-[18%] text-center">Quantity (pcs)</th>
+                <th class="w-[26%] text-center">Total</th>
+                <th class="w-[18%]">Status</th>
+              </tr>
+            </thead>
+            <tbody id="summary-sheet-tbody">
+              <!-- Dynamically rendered grouped rows matching reference image -->
+            </tbody>
+          </table>
+
+          <!-- Grand Total Footer inside the Sheet -->
+          <div class="mt-2.5 pt-2 border-t border-slate-500 flex flex-wrap items-center justify-between text-xs font-semibold text-slate-900 px-1 gap-2">
+            <div>Grand Total Stock: <span id="sheet-grand-total" class="font-extrabold">0 pcs</span></div>
+            <div class="flex gap-3">
+              <span>Allok: <strong id="sheet-grand-allok">0</strong></span>
+              <span>Pen: <strong id="sheet-grand-pen">0</strong></span>
+              <span>Filling: <strong id="sheet-grand-filling">0</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 3. STOCK REGISTER VIEW ==================== -->
+    <section id="view-register" class="hidden space-y-4">
+      <!-- Top Header & Controls -->
+      <div class="no-print bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <button onclick="navigateTo('home')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Stock Register</h2>
+            <p class="text-xs text-slate-500">Full batch-wise inventory, status & editable records</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="openBatchModal()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-xs transition">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Add New Batch</span>
+          </button>
+          <button onclick="shareRegisterWhatsApp()" class="bg-[#25D366] hover:bg-[#1ebe5d] text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-xs transition">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
+            <span>WhatsApp</span>
+          </button>
+          <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 transition">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>Print PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Register Metric Totals -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div class="bg-white rounded-xl border border-slate-200 p-3">
+          <span class="text-[11px] font-semibold text-slate-500 uppercase">Total Stock</span>
+          <p id="reg-total-stock" class="text-xl font-bold text-slate-900 mt-0.5">0</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-3">
+          <span class="text-[11px] font-semibold text-emerald-700 uppercase">Total Ready for Delivery</span>
+          <p id="reg-total-ready" class="text-xl font-bold text-emerald-700 mt-0.5">0</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-3">
+          <span class="text-[11px] font-semibold text-amber-700 uppercase">Total Pen Stock</span>
+          <p id="reg-total-pen" class="text-xl font-bold text-amber-700 mt-0.5">0</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-3">
+          <span class="text-[11px] font-semibold text-blue-700 uppercase">Total Filled Stock</span>
+          <p id="reg-total-filled" class="text-xl font-bold text-blue-700 mt-0.5">0</p>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="no-print bg-white rounded-xl border border-slate-200 p-3 flex flex-wrap items-center gap-2.5">
+        <select id="regFilterStrength" onchange="renderStockRegister()" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none">
+          <option value="ALL">All Strengths (MG)</option>
+          <option value="Tizma 2.5 mg">Tizma 2.5 mg</option>
+          <option value="Tizma 5 mg">Tizma 5 mg</option>
+          <option value="Tizma 7.5 mg">Tizma 7.5 mg</option>
+          <option value="Tizma 10 mg">Tizma 10 mg</option>
+          <option value="Tizma 12.5 mg">Tizma 12.5 mg</option>
+          <option value="Tizma 15 mg">Tizma 15 mg</option>
+        </select>
+        <select id="regFilterStatus" onchange="renderStockRegister()" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none">
+          <option value="ALL">All Statuses</option>
+          <option value="Ready for delivery">Ready for delivery</option>
+          <option value="Filled">Filled</option>
+          <option value="Pen">Pen</option>
+          <option value="Running">Running</option>
+          <option value="Hold">Hold</option>
+        </select>
+        <input type="text" id="regFilterSearch" oninput="renderStockRegister()" placeholder="Filter batch no or remarks..." class="flex-1 min-w-[160px] bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:bg-white" />
+      </div>
+
+      <!-- Stock Register Data Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden print-area">
+        <div class="overflow-x-auto table-scroll">
+          <table class="w-full text-left border-collapse min-w-[920px]">
+            <thead>
+              <tr class="bg-slate-100 border-b border-slate-200 text-[11px] font-bold uppercase text-slate-600">
+                <th class="py-3 px-3">Strength / MG</th>
+                <th class="py-3 px-3">Batch Number</th>
+                <th class="py-3 px-3 text-right">Quantity</th>
+                <th class="py-3 px-3 text-right">Ready for Delivery</th>
+                <th class="py-3 px-3 text-right">Pen Qty</th>
+                <th class="py-3 px-3 text-right">Filled Qty</th>
+                <th class="py-3 px-3">Status</th>
+                <th class="py-3 px-3">Remarks</th>
+                <th class="py-3 px-3 text-center no-print">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="stock-register-tbody" class="divide-y divide-slate-100 text-xs sm:text-sm">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 4. DELIVERY CHALLAN VIEW ==================== -->
+    <section id="view-challan" class="hidden space-y-4">
+      <div class="no-print bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <button onclick="navigateTo('home')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Delivery Challan & Auto Stock Deduction</h2>
+            <p class="text-xs text-slate-500">Upload challan photo, deduct stock automatically & archive documents</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="exportChallansJSON()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Export Archive</span>
+          </button>
+          <button onclick="window.print()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>Print PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- New Delivery Challan Entry Card -->
+      <div class="no-print bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs">
+        <h3 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+          <i data-lucide="file-plus-2" class="w-4 h-4 text-amber-600"></i>
+          <span>Create Delivery Challan (Auto-Deducts Batch Stock)</span>
+        </h3>
+        <form id="challanForm" onsubmit="handleChallanSubmit(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Date *</label>
+            <input type="date" id="challanDate" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Challan Number *</label>
+            <input type="text" id="challanNumber" required placeholder="e.g., CH-2026-001" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Select Product & Batch *</label>
+            <select id="challanBatchSelect" required onchange="updateChallanAvailableHint()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900">
+              <!-- Populated dynamically -->
+            </select>
+            <p id="challanAvailableHint" class="text-[11px] text-emerald-700 font-medium mt-1"></p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Delivery Quantity (pcs) *</label>
+            <input type="number" id="challanQty" min="1" required placeholder="Enter qty to deduct" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Upload Challan / Invoice Image</label>
+            <input type="file" id="challanImageInput" accept="image/*" onchange="previewChallanUpload(event)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white" />
+            <div id="challanUploadPreviewWrap" class="hidden mt-2 flex items-center gap-2">
+              <img id="challanUploadPreviewImg" src="" alt="Preview" class="w-12 h-12 object-cover rounded-lg border border-slate-300" />
+              <span class="text-[11px] text-emerald-700 font-medium">Image ready for archiving</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
+            <input type="text" id="challanRemarks" placeholder="Destination, receiver, notes..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div class="sm:col-span-2 lg:col-span-3 flex justify-end pt-1">
+            <button type="submit" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm px-6 py-3 rounded-xl shadow-xs transition flex items-center justify-center gap-2">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+              <span>Save Challan & Deduct Stock</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Archived Delivery Challans Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden print-area">
+        <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-900">Archived Delivery Challans</h3>
+          <span id="challan-count-badge" class="text-xs font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">0 Records</span>
+        </div>
+        <div class="overflow-x-auto table-scroll">
+          <table class="w-full text-left border-collapse min-w-[780px]">
+            <thead>
+              <tr class="bg-slate-100 border-b border-slate-200 text-[11px] font-bold uppercase text-slate-600">
+                <th class="py-3 px-3">Date</th>
+                <th class="py-3 px-3">Challan Number</th>
+                <th class="py-3 px-3">Strength & Batch</th>
+                <th class="py-3 px-3 text-right">Deducted Qty</th>
+                <th class="py-3 px-3">Challan Image</th>
+                <th class="py-3 px-3">Remarks</th>
+                <th class="py-3 px-3 text-center no-print">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="challan-tbody" class="divide-y divide-slate-100 text-xs sm:text-sm">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 5. HIDDEN CODE AUTHORIZATION VIEW ==================== -->
+    <section id="view-hiddencode" class="hidden space-y-4">
+      <div class="no-print bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <button onclick="navigateTo('home')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Hidden Code Authorization</h2>
+            <p class="text-xs text-slate-500">Sticker serial tracking, Gap & Total Sticker Used calculation</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button onclick="shareHiddenCodesWhatsApp()" class="bg-[#25D366] hover:bg-[#1ebe5d] text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
+            <span>Share WhatsApp</span>
+          </button>
+          <button onclick="window.print()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>Print PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Hidden Code Entry Form -->
+      <div class="no-print bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs">
+        <h3 id="hcFormTitle" class="text-sm font-bold text-slate-900 mb-3">Add Hidden Code Authorization Record</h3>
+        <form id="hiddenCodeForm" onsubmit="handleHiddenCodeSubmit(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <input type="hidden" id="hcEditId" value="" />
+          
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Strength *</label>
+            <input type="text" id="hcStrength" list="strengthSuggestions" required placeholder="e.g., Tizma 2.5 mg" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Batch Number *</label>
+            <input type="text" id="hcBatch" required placeholder="e.g., 1026007" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">First (Fast) Hidden Code *</label>
+            <input type="text" id="hcFirstCode" required placeholder="Start hidden code" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Last Hidden Code *</label>
+            <input type="text" id="hcLastCode" required placeholder="End hidden code" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">First (Fast) Sticker Serial No *</label>
+            <input type="number" id="hcFirstSerial" oninput="autoCalculateStickers()" required placeholder="e.g., 1001" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Last Sticker Serial No *</label>
+            <input type="number" id="hcLastSerial" oninput="autoCalculateStickers()" required placeholder="e.g., 3850" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Gap (Damaged / Skipped)</label>
+            <input type="number" id="hcGap" value="0" min="0" oninput="autoCalculateStickers()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Total Sticker Used</label>
+            <input type="number" id="hcTotalUsed" required class="w-full bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-sm font-bold text-emerald-900 focus:outline-none" />
+          </div>
+
+          <div class="sm:col-span-2 lg:col-span-4 flex justify-end gap-2 pt-1">
+            <button type="button" id="hcCancelEditBtn" onclick="resetHiddenCodeForm()" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-4 py-2.5 rounded-xl">
+              Cancel Edit
+            </button>
+            <button type="submit" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-xs transition">
+              Save Authorization Entry
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Hidden Code Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden print-area">
+        <div class="overflow-x-auto table-scroll">
+          <table class="w-full text-left border-collapse min-w-[920px]">
+            <thead>
+              <tr class="bg-slate-100 border-b border-slate-200 text-[11px] font-bold uppercase text-slate-600">
+                <th class="py-3 px-3">Strength</th>
+                <th class="py-3 px-3">Batch Number</th>
+                <th class="py-3 px-3">First Hidden Code</th>
+                <th class="py-3 px-3">Last Hidden Code</th>
+                <th class="py-3 px-3 text-right">First Sticker Serial</th>
+                <th class="py-3 px-3 text-right">Last Sticker Serial</th>
+                <th class="py-3 px-3 text-right">Gap</th>
+                <th class="py-3 px-3 text-right">Total Sticker Used</th>
+                <th class="py-3 px-3 text-center no-print">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="hiddencode-tbody" class="divide-y divide-slate-100 text-xs sm:text-sm">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 6. GLOBAL SEARCH VIEW ==================== -->
+    <section id="view-search" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
+        <div class="flex items-center gap-2.5">
+          <button onclick="navigateTo('home')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Global ERP Search</h2>
+            <p class="text-xs text-slate-500">Search Batch Number, Strength/MG, First/Last Hidden Code, Serial No, or Challan No</p>
+          </div>
+        </div>
+
+        <div class="relative">
+          <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5"></i>
+          <input 
+            type="text" 
+            id="globalSearchInput" 
+            oninput="runGlobalSearch()" 
+            placeholder="Type Batch No, 2.5 mg, Hidden Code, Serial No, Challan Number..." 
+            class="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white"
+          />
+          <button onclick="document.getElementById('globalSearchInput').value=''; runGlobalSearch();" class="absolute right-3 top-3 text-slate-400 hover:text-slate-700">
+            <i data-lucide="x-circle" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="globalSearchResults" class="space-y-4">
+        <!-- Grouped search results rendered here -->
+      </div>
+    </section>
+
+    <!-- ==================== 7. BACKUP & RESTORE VIEW ==================== -->
+    <section id="view-backup" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex items-center gap-2.5">
+        <button onclick="navigateTo('home')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        </button>
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Mobile Data Backup & Restore</h2>
+          <p class="text-xs text-slate-500">All data is automatically saved on your device. Export backups anytime.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Export Backup Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+          <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <i data-lucide="download-cloud" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-slate-900">1. Download Full Backup File</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Downloads a complete JSON backup of your Stock Register, Delivery Challans (including uploaded images), and Hidden Code Authorization records to your phone.
+          </p>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button onclick="downloadFullBackup()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-3 rounded-xl flex items-center gap-2 transition">
+              <i data-lucide="file-down" class="w-4 h-4"></i>
+              <span>Download Backup (.json)</span>
+            </button>
+            <button onclick="shareSummaryWhatsApp()" class="bg-[#25D366] hover:bg-[#1ebe5d] text-white text-xs font-semibold px-4 py-3 rounded-xl flex items-center gap-2 transition">
+              <i data-lucide="share-2" class="w-4 h-4"></i>
+              <span>Share Stock on WhatsApp</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Restore Backup Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+          <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+            <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-slate-900">2. Restore Data from Backup File</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Select a previously saved <code class="bg-slate-100 px-1 py-0.5 rounded">tizma_erp_backup.json</code> file from your phone storage to restore all your records immediately.
+          </p>
+          <div class="pt-1">
+            <label class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-3 rounded-xl cursor-pointer transition">
+              <i data-lucide="folder-open" class="w-4 h-4"></i>
+              <span>Choose Backup File to Restore</span>
+              <input type="file" accept=".json,application/json" onchange="restoreFullBackup(event)" class="hidden" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reset / Load Initial Tizma Sheet Data -->
+      <div class="bg-white rounded-2xl border border-rose-200 p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <h3 class="text-sm font-bold text-rose-900">Reset to Default Tizma Reference Stock</h3>
+          <p class="text-xs text-slate-600 mt-0.5">Restores the initial Tizma 2.5 mg to 15 mg batch table if you want to start fresh.</p>
+        </div>
+        <button onclick="openResetConfirmModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold px-4 py-2.5 rounded-xl shrink-0 transition">
+          Reset Default Data
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="no-print md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-2 py-1.5 flex items-center justify-around shadow-lg">
+    <button onclick="navigateTo('home')" data-nav="home" class="nav-btn flex flex-col items-center py-1 px-2 text-slate-900 font-semibold">
+      <i data-lucide="home" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Home</span>
+    </button>
+    <button onclick="navigateTo('register')" data-nav="register" class="nav-btn flex flex-col items-center py-1 px-2 text-slate-500">
+      <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Register</span>
+    </button>
+    <button onclick="navigateTo('summary')" data-nav="summary" class="nav-btn flex flex-col items-center py-1 px-2 text-slate-500">
+      <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Sheet</span>
+    </button>
+    <button onclick="navigateTo('challan')" data-nav="challan" class="nav-btn flex flex-col items-center py-1 px-2 text-slate-500">
+      <i data-lucide="truck" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Challan</span>
+    </button>
+    <button onclick="navigateTo('hiddencode')" data-nav="hiddencode" class="nav-btn flex flex-col items-center py-1 px-2 text-slate-500">
+      <i data-lucide="shield-check" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Codes</span>
+    </button>
+  </nav>
+
+  <!-- Datalist for Strength Suggestions -->
+  <datalist id="strengthSuggestions">
+    <option value="Tizma 2.5 mg"></option>
+    <option value="Tizma 5 mg"></option>
+    <option value="Tizma 7.5 mg"></option>
+    <option value="Tizma 10 mg"></option>
+    <option value="Tizma 12.5 mg"></option>
+    <option value="Tizma 15 mg"></option>
+  </datalist>
+
+  <!-- ==================== MODAL: ADD / EDIT BATCH ==================== -->
+  <div id="batchModal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 id="batchModalTitle" class="text-base font-bold text-slate-900">Edit Batch & Stock</h3>
+        <button onclick="closeBatchModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="batchForm" onsubmit="saveBatchForm(event)" class="space-y-3">
+        <input type="hidden" id="editBatchId" />
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Strength / MG *</label>
+          <input type="text" id="modalStrength" list="strengthSuggestions" required placeholder="e.g., Tizma 2.5 mg" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Batch Number *</label>
+          <input type="text" id="modalBatchNo" required placeholder="e.g., 1026007" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Total Quantity (pcs) *</label>
+            <input type="number" id="modalQuantity" min="0" required oninput="syncQuantitiesFromStatus()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Product Status *</label>
+            <select id="modalStatus" onchange="syncQuantitiesFromStatus()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900">
+              <option value="Ready for delivery">Ready for delivery</option>
+              <option value="Filled">Filled</option>
+              <option value="Pen">Pen</option>
+              <option value="Running">Running</option>
+              <option value="Hold">Hold</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Detailed Sub-Quantities (Auto-synced by status, or customizable) -->
+        <div class="bg-slate-50 rounded-xl p-3 border border-slate-200/80 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase text-slate-500">Breakdown Quantities</span>
+            <span class="text-[10px] text-slate-400">Auto-updates with Status</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[11px] font-medium text-emerald-800 mb-0.5">Ready Qty</label>
+              <input type="number" id="modalReadyQty" min="0" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-amber-800 mb-0.5">Pen Qty</label>
+              <input type="number" id="modalPenQty" min="0" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-blue-800 mb-0.5">Filled Qty</label>
+              <input type="number" id="modalFilledQty" min="0" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold" />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
+          <input type="text" id="modalRemarks" placeholder="Optional remarks or batch notes..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeBatchModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold">
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: GALLERY IMAGE PREVIEW / SAVE ==================== -->
+  <div id="imagePreviewModal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-4 shadow-2xl space-y-3 max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Stock Sheet Image Ready</h3>
+          <p class="text-[11px] text-slate-500">Tap Download or press & hold image to save to Phone Gallery</p>
+        </div>
+        <button onclick="closeImagePreviewModal()" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-auto bg-slate-100 rounded-xl p-2 flex items-center justify-center">
+        <img id="generatedGalleryImage" src="" alt="Generated Stock Sheet" class="max-w-full h-auto rounded-lg shadow-sm" />
+      </div>
+
+      <div class="flex flex-wrap gap-2 pt-1">
+        <a id="directDownloadPngLink" href="#" download="Tizma_Stock_Sheet.png" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-1.5">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Download PNG</span>
+        </a>
+        <button id="nativeShareImageBtn" onclick="nativeShareGeneratedImage()" class="flex-1 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-xs font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-1.5">
+          <i data-lucide="share-2" class="w-4 h-4"></i>
+          <span>Share Image</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: CONFIRMATION DIALOG (Replaces confirm()) ==================== -->
+  <div id="confirmModal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl space-y-4">
+      <h3 id="confirmModalTitle" class="text-base font-bold text-slate-900">Confirm Action</h3>
+      <p id="confirmModalMessage" class="text-xs text-slate-600 leading-relaxed"></p>
+      <div class="flex justify-end gap-2">
+        <button onclick="closeConfirmModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">Cancel</button>
+        <button id="confirmModalActionBtn" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== STATE & INITIAL REFERENCE DATA ====================
+    const STORAGE_KEY = 'tizma_web_erp_v1';
+
+    // Exact initial dataset matching the user's shared Tizma Stock Sheet image
+    const DEFAULT_STOCK_DATA = [
+      // Tizma 2.5 mg
+      { id: 'b1', strength: 'Tizma 2.5 mg', batchNo: '1026007', quantity: 2825, readyQty: 2825, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b2', strength: 'Tizma 2.5 mg', batchNo: '1026017', quantity: 1525, readyQty: 1525, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b3', strength: 'Tizma 2.5 mg', batchNo: '1126004', quantity: 5000, readyQty: 5000, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      // Tizma 5 mg
+      { id: 'b4', strength: 'Tizma 5 mg', batchNo: '1026020', quantity: 200, readyQty: 200, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b5', strength: 'Tizma 5 mg', batchNo: '1126002', quantity: 1500, readyQty: 1500, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b6', strength: 'Tizma 5 mg', batchNo: '1126007', quantity: 5000, readyQty: 5000, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b7', strength: 'Tizma 5 mg', batchNo: '1126008', quantity: 5073, readyQty: 0, penQty: 0, filledQty: 5073, status: 'Filled', remarks: '' },
+      { id: 'b8', strength: 'Tizma 5 mg', batchNo: '1126009', quantity: 5100, readyQty: 0, penQty: 0, filledQty: 5100, status: 'Filled', remarks: '' },
+      // Tizma 7.5 mg
+      { id: 'b9', strength: 'Tizma 7.5 mg', batchNo: '1026021', quantity: 150, readyQty: 150, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b10', strength: 'Tizma 7.5 mg', batchNo: '1026022', quantity: 500, readyQty: 500, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b11', strength: 'Tizma 7.5 mg', batchNo: '1026005', quantity: 3000, readyQty: 3000, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b12', strength: 'Tizma 7.5 mg', batchNo: '1126003', quantity: 5000, readyQty: 0, penQty: 0, filledQty: 5000, status: 'Filled', remarks: '' },
+      // Tizma 10 mg
+      { id: 'b13', strength: 'Tizma 10 mg', batchNo: '1026023', quantity: 325, readyQty: 325, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b14', strength: 'Tizma 10 mg', batchNo: '1126001', quantity: 4575, readyQty: 4575, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      // Tizma 12.5 mg
+      { id: 'b15', strength: 'Tizma 12.5 mg', batchNo: '1026008', quantity: 100, readyQty: 100, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b16', strength: 'Tizma 12.5 mg', batchNo: '1026024', quantity: 2850, readyQty: 2850, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b17', strength: 'Tizma 12.5 mg', batchNo: '1126005', quantity: 5000, readyQty: 5000, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      // Tizma 15 mg
+      { id: 'b18', strength: 'Tizma 15 mg', batchNo: '1026018', quantity: 125, readyQty: 125, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b19', strength: 'Tizma 15 mg', batchNo: '1026026', quantity: 1850, readyQty: 1850, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b20', strength: 'Tizma 15 mg', batchNo: '1026010', quantity: 2050, readyQty: 2050, penQty: 0, filledQty: 0, status: 'Ready for delivery', remarks: '' },
+      { id: 'b21', strength: 'Tizma 15 mg', batchNo: '1126006', quantity: 5000, readyQty: 0, penQty: 0, filledQty: 5000, status: 'Filled', remarks: '' }
+    ];
+
+    const DEFAULT_HIDDEN_CODES = [
+      { id: 'hc1', strength: 'Tizma 2.5 mg', batchNo: '1026007', firstCode: 'HC-25-0001', lastCode: 'HC-25-2825', firstSerial: 10001, lastSerial: 12825, gap: 0, totalUsed: 2825 }
+    ];
+
+    let appState = {
+      batches: [],
+      challans: [],
+      hiddenCodes: []
+    };
+
+    let currentUploadedChallanDataUrl = '';
+    let lastGeneratedImageDataUrl = '';
+
+    // ==================== INITIALIZATION & PERSISTENCE ====================
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          appState.batches = Array.isArray(parsed.batches) ? parsed.batches : [...DEFAULT_STOCK_DATA];
+          appState.challans = Array.isArray(parsed.challans) ? parsed.challans : [];
+          appState.hiddenCodes = Array.isArray(parsed.hiddenCodes) ? parsed.hiddenCodes : [...DEFAULT_HIDDEN_CODES];
+        } else {
+          appState.batches = JSON.parse(JSON.stringify(DEFAULT_STOCK_DATA));
+          appState.challans = [];
+          appState.hiddenCodes = JSON.parse(JSON.stringify(DEFAULT_HIDDEN_CODES));
+          saveState();
+        }
+      } catch (err) {
+        console.error('Error loading localStorage:', err);
+        appState.batches = JSON.parse(JSON.stringify(DEFAULT_STOCK_DATA));
+        appState.challans = [];
+        appState.hiddenCodes = [];
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (err) {
+        showToast('Storage warning: Image size may exceed browser storage limit. Download a JSON backup.', 'error');
+      }
+      refreshAllViews();
+    }
+
+    function refreshAllViews() {
+      updateDashboardStats();
+      renderSummarySheet();
+      renderStockRegister();
+      renderChallanDropdown();
+      renderChallanList();
+      renderHiddenCodesTable();
+      lucide.createIcons();
+    }
+
+    // ==================== NAVIGATION ====================
+    function navigateTo(viewName) {
+      const sections = ['home', 'summary', 'register', 'challan', 'hiddencode', 'search', 'backup'];
+      sections.forEach(sec => {
+        const el = document.getElementById(`view-${sec}`);
+        if (el) el.classList.toggle('hidden', sec !== viewName);
+      });
+
+      // Update mobile nav active highlight
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const isTarget = btn.getAttribute('data-nav') === viewName;
+        btn.classList.toggle('text-slate-900', isTarget);
+        btn.classList.toggle('font-semibold', isTarget);
+        btn.classList.toggle('text-slate-500', !isTarget);
+      });
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      refreshAllViews();
+    }
+
+    // ==================== TOAST & CONFIRMATION UI ====================
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bgClass = type === 'error' ? 'bg-rose-600' : 'bg-slate-900';
+      toast.className = `${bgClass} text-white text-xs font-medium px-4 py-3 rounded-xl shadow-lg flex items-center justify-between gap-2 pointer-events-auto transition-all`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function openConfirmDialog(title, message, onConfirmCallback) {
+      document.getElementById('confirmModalTitle').textContent = title;
+      document.getElementById('confirmModalMessage').textContent = message;
+      const actionBtn = document.getElementById('confirmModalActionBtn');
+      actionBtn.onclick = () => {
+        closeConfirmModal();
+        onConfirmCallback();
+      };
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirmModal').classList.add('hidden');
+    }
+
+    // ==================== DASHBOARD CALCULATIONS ====================
+    function calculateTotals(batchesList = appState.batches) {
+      let totalStock = 0;
+      let totalReady = 0;
+      let totalPen = 0;
+      let totalFilled = 0;
+
+      batchesList.forEach(b => {
+        const qty = Number(b.quantity) || 0;
+        const ready = Number(b.readyQty) || 0;
+        const pen = Number(b.penQty) || 0;
+        const filled = Number(b.filledQty) || 0;
+
+        totalStock += qty;
+        totalReady += ready;
+        totalPen += pen;
+        totalFilled += filled;
+      });
+
+      return { totalStock, totalReady, totalPen, totalFilled };
+    }
+
+    function updateDashboardStats() {
+      const totals = calculateTotals();
+      document.getElementById('dash-total-products').textContent = totals.totalStock.toLocaleString();
+      document.getElementById('dash-total-ready').textContent = totals.totalReady.toLocaleString();
+      document.getElementById('dash-total-pen').textContent = totals.totalPen.toLocaleString();
+      document.getElementById('dash-total-filled').textContent = totals.totalFilled.toLocaleString();
+
+      document.getElementById('reg-total-stock').textContent = totals.totalStock.toLocaleString();
+      document.getElementById('reg-total-ready').textContent = totals.totalReady.toLocaleString();
+      document.getElementById('reg-total-pen').textContent = totals.totalPen.toLocaleString();
+      document.getElementById('reg-total-filled').textContent = totals.totalFilled.toLocaleString();
+    }
+
+    // ==================== STOCK SUMMARY SHEET (REFERENCE IMAGE LAYOUT) ====================
+    function getStrengthOrderWeight(strength) {
+      const match = strength.match(/(\d+(\.\d+)?)/);
+      return match ? parseFloat(match[1]) : 999;
+    }
+
+    function getSheetStatusDisplay(status) {
+      switch (status) {
+        case 'Ready for delivery':
+          return { text: 'All OK', cls: 'status-all-ok' };
+        case 'Filled':
+          return { text: 'Filling OK', cls: 'status-filling-ok' };
+        case 'Pen':
+          return { text: 'Pen', cls: 'status-pen' };
+        case 'Running':
+          return { text: 'Running', cls: 'status-running' };
+        case 'Hold':
+          return { text: 'Hold', cls: 'status-hold' };
+        default:
+          return { text: status || 'All OK', cls: 'status-all-ok' };
+      }
+    }
+
+    function renderSummarySheet() {
+      const tbody = document.getElementById('summary-sheet-tbody');
+      const now = new Date();
+      document.getElementById('summary-date-stamp').textContent = now.toLocaleDateString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      });
+
+      // Group batches by Strength preserving standard MG order
+      const groupsMap = new Map();
+      const sortedBatches = [...appState.batches].sort((a, b) => {
+        return getStrengthOrderWeight(a.strength) - getStrengthOrderWeight(b.strength);
+      });
+
+      sortedBatches.forEach(item => {
+        const key = item.strength.trim();
+        if (!groupsMap.has(key)) {
+          groupsMap.set(key, []);
+        }
+        groupsMap.get(key).push(item);
+      });
+
+      let html = '';
+      let grandTotal = 0;
+      let grandAllok = 0;
+      let grandPen = 0;
+      let grandFilling = 0;
+
+      groupsMap.forEach((items, strengthName) => {
+        const rowSpan = items.length;
+        let grpTotal = 0;
+        let grpAllok = 0;
+        let grpPen = 0;
+        let grpFilling = 0;
+
+        items.forEach(b => {
+          grpTotal += Number(b.quantity) || 0;
+          grpAllok += Number(b.readyQty) || 0;
+          grpPen += Number(b.penQty) || 0;
+          grpFilling += Number(b.filledQty) || 0;
+        });
+
+        grandTotal += grpTotal;
+        grandAllok += grpAllok;
+        grandPen += grpPen;
+        grandFilling += grpFilling;
+
+        items.forEach((b, idx) => {
+          const isFirst = idx === 0;
+          const topBorderClass = isFirst ? 'summary-group-border-top' : '';
+          const statusObj = getSheetStatusDisplay(b.status);
+
+          html += `<tr>`;
+          if (isFirst) {
+            html += `
+              <td rowspan="${rowSpan}" class="${topBorderClass} font-medium text-sm sm:text-base text-slate-900 text-center">
+                ${escapeHtml(strengthName)}
+              </td>
+            `;
+          }
+
+          html += `
+            <td class="${topBorderClass} text-xs font-medium text-slate-800">${escapeHtml(b.batchNo)}</td>
+            <td class="${topBorderClass} text-xs font-medium text-slate-900 text-center">${Number(b.quantity).toLocaleString()}</td>
+          `;
+
+          if (isFirst) {
+            html += `
+              <td rowspan="${rowSpan}" class="${topBorderClass} text-center leading-snug">
+                <div class="text-sm sm:text-base font-bold text-slate-900">${grpTotal.toLocaleString()} <span class="text-xs font-normal">pcs</span></div>
+                <div class="text-[11px] text-slate-800 mt-0.5">Allok: ${grpAllok.toLocaleString()}</div>
+                <div class="text-[11px] text-slate-800">Pen: ${grpPen.toLocaleString()}</div>
+                <div class="text-[11px] text-slate-800">Filling: ${grpFilling.toLocaleString()}</div>
+              </td>
+            `;
+          }
+
+          html += `
+            <td class="${topBorderClass} text-xs ${statusObj.cls}">${escapeHtml(statusObj.text)}</td>
+          </tr>`;
+        });
+      });
+
+      tbody.innerHTML = html || `<tr><td colspan="5" class="text-center py-6 text-slate-600">No batches available. Add batches in Stock Register.</td></tr>`;
+
+      document.getElementById('sheet-grand-total').textContent = `${grandTotal.toLocaleString()} pcs`;
+      document.getElementById('sheet-grand-allok').textContent = grandAllok.toLocaleString();
+      document.getElementById('sheet-grand-pen').textContent = grandPen.toLocaleString();
+      document.getElementById('sheet-grand-filling').textContent = grandFilling.toLocaleString();
+    }
+
+    // ==================== GALLERY PNG IMAGE DOWNLOAD & WHATSAPP SHARE ====================
+    async function downloadSummaryAsImage() {
+      const target = document.getElementById('summary-capture-area');
+      showToast('Generating high-resolution gallery image...');
+      try {
+        const canvas = await html2canvas(target, {
+          scale: 3,
+          backgroundColor: '#d6d8dc',
+          useCORS: true,
+          logging: false
+        });
+        const dataUrl = canvas.toDataURL('image/png');
+        lastGeneratedImageDataUrl = dataUrl;
+
+        // Show modal with direct download + long-press gallery save support for mobile
+        const imgEl = document.getElementById('generatedGalleryImage');
+        const linkEl = document.getElementById('directDownloadPngLink');
+        const fileName = `Tizma_Stock_Sheet_${new Date().toISOString().slice(0, 10)}.png`;
+
+        imgEl.src = dataUrl;
+        linkEl.href = dataUrl;
+        linkEl.download = fileName;
+
+        document.getElementById('imagePreviewModal').classList.remove('hidden');
+
+        // Also trigger automatic download
+        const autoLink = document.createElement('a');
+        autoLink.href = dataUrl;
+        autoLink.download = fileName;
+        document.body.appendChild(autoLink);
+        autoLink.click();
+        document.body.removeChild(autoLink);
+
+        showToast('Stock sheet image saved! Check Downloads / Gallery.');
+      } catch (err) {
+        console.error(err);
+        showToast('Could not generate image. Please try Print / Save PDF.', 'error');
+      }
+    }
+
+    function closeImagePreviewModal() {
+      document.getElementById('imagePreviewModal').classList.add('hidden');
+    }
+
+    async function nativeShareGeneratedImage() {
+      if (!lastGeneratedImageDataUrl) return;
+      try {
+        const blob = await (await fetch(lastGeneratedImageDataUrl)).blob();
+        const file = new File([blob], `Tizma_Stock_Sheet_${new Date().toISOString().slice(0, 10)}.png`, { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Tizma Stock Report',
+            text: 'Tizma Current Stock Summary Sheet',
+            files: [file]
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn('File share fallback to WhatsApp text:', err);
+      }
+      shareSummaryWhatsApp();
+    }
+
+    function shareSummaryWhatsApp() {
+      const totals = calculateTotals();
+      const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      let text = `*TIZMA STOCK REPORT (${dateStr})*\n`;
+      text += `Total Stock: *${totals.totalStock.toLocaleString()} pcs*\n`;
+      text += `Ready (All OK): *${totals.totalReady.toLocaleString()}*\n`;
+      text += `Pen: *${totals.totalPen.toLocaleString()}* | Filled: *${totals.totalFilled.toLocaleString()}*\n`;
+      text += `------------------------\n`;
+
+      const groups = new Map();
+      [...appState.batches]
+        .sort((a, b) => getStrengthOrderWeight(a.strength) - getStrengthOrderWeight(b.strength))
+        .forEach(b => {
+          if (!groups.has(b.strength)) groups.set(b.strength, []);
+          groups.get(b.strength).push(b);
+        });
+
+      groups.forEach((items, strength) => {
+        const sum = items.reduce((acc, x) => acc + Number(x.quantity || 0), 0);
+        text += `\n*${strength}* (Total: ${sum.toLocaleString()} pcs)\n`;
+        items.forEach(b => {
+          const st = getSheetStatusDisplay(b.status).text;
+          text += `• Batch ${b.batchNo}: ${Number(b.quantity).toLocaleString()} pcs [${st}]\n`;
+        });
+      });
+
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      window.open(waUrl, '_blank');
+    }
+
+    function printSection(elementId) {
+      window.print();
+    }
+
+    // ==================== STOCK REGISTER MANAGEMENT ====================
+    function renderStockRegister() {
+      const tbody = document.getElementById('stock-register-tbody');
+      const strengthFilter = document.getElementById('regFilterStrength').value;
+      const statusFilter = document.getElementById('regFilterStatus').value;
+      const searchFilter = document.getElementById('regFilterSearch').value.trim().toLowerCase();
+
+      const filtered = appState.batches.filter(b => {
+        const matchStrength = strengthFilter === 'ALL' || b.strength === strengthFilter;
+        const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
+        const matchText = !searchFilter ||
+          b.batchNo.toLowerCase().includes(searchFilter) ||
+          b.strength.toLowerCase().includes(searchFilter) ||
+          (b.remarks && b.remarks.toLowerCase().includes(searchFilter));
+        return matchStrength && matchStatus && matchText;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-500 text-xs">No matching batches found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(b => {
+        const badgeStyles = {
+          'Ready for delivery': 'bg-emerald-100 text-emerald-800 border-emerald-200',
+          'Filled': 'bg-blue-100 text-blue-800 border-blue-200',
+          'Pen': 'bg-amber-100 text-amber-800 border-amber-200',
+          'Running': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+          'Hold': 'bg-rose-100 text-rose-800 border-rose-200'
+        }[b.status] || 'bg-slate-100 text-slate-800';
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="py-3 px-3 font-semibold text-slate-900 whitespace-nowrap">${escapeHtml(b.strength)}</td>
+            <td class="py-3 px-3 font-mono font-bold text-slate-800">${escapeHtml(b.batchNo)}</td>
+            <td class="py-3 px-3 text-right font-bold text-slate-900">${Number(b.quantity).toLocaleString()}</td>
+            <td class="py-3 px-3 text-right font-medium text-emerald-700">${Number(b.readyQty).toLocaleString()}</td>
+            <td class="py-3 px-3 text-right font-medium text-amber-700">${Number(b.penQty).toLocaleString()}</td>
+            <td class="py-3 px-3 text-right font-medium text-blue-700">${Number(b.filledQty).toLocaleString()}</td>
+            <td class="py-3 px-3">
+              <select onchange="quickChangeBatchStatus('${b.id}', this.value)" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg border ${badgeStyles} focus:outline-none cursor-pointer">
+                <option value="Ready for delivery" ${b.status === 'Ready for delivery' ? 'selected' : ''}>Ready for delivery</option>
+                <option value="Filled" ${b.status === 'Filled' ? 'selected' : ''}>Filled</option>
+                <option value="Pen" ${b.status === 'Pen' ? 'selected' : ''}>Pen</option>
+                <option value="Running" ${b.status === 'Running' ? 'selected' : ''}>Running</option>
+                <option value="Hold" ${b.status === 'Hold' ? 'selected' : ''}>Hold</option>
+              </select>
+            </td>
+            <td class="py-3 px-3 text-xs text-slate-600 max-w-[180px] truncate" title="${escapeHtml(b.remarks || '')}">
+              ${escapeHtml(b.remarks || '—')}
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap no-print">
+              <button onclick="openBatchModal('${b.id}')" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 mr-1" title="Edit Batch & Stock">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="confirmDeleteBatch('${b.id}')" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700" title="Delete Batch">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function quickChangeBatchStatus(batchId, newStatus) {
+      const batch = appState.batches.find(x => x.id === batchId);
+      if (!batch) return;
+      batch.status = newStatus;
+      const qty = Number(batch.quantity) || 0;
+      if (newStatus === 'Ready for delivery') {
+        batch.readyQty = qty; batch.penQty = 0; batch.filledQty = 0;
+      } else if (newStatus === 'Filled') {
+        batch.readyQty = 0; batch.penQty = 0; batch.filledQty = qty;
+      } else if (newStatus === 'Pen') {
+        batch.readyQty = 0; batch.penQty = qty; batch.filledQty = 0;
+      }
+      saveState();
+      showToast(`Batch ${batch.batchNo} updated to ${newStatus}`);
+    }
+
+    function openBatchModal(batchId = null) {
+      const modal = document.getElementById('batchModal');
+      const title = document.getElementById('batchModalTitle');
+
+      if (batchId) {
+        const b = appState.batches.find(x => x.id === batchId);
+        if (!b) return;
+        title.textContent = `Edit Batch ${b.batchNo}`;
+        document.getElementById('editBatchId').value = b.id;
+        document.getElementById('modalStrength').value = b.strength;
+        document.getElementById('modalBatchNo').value = b.batchNo;
+        document.getElementById('modalQuantity').value = b.quantity;
+        document.getElementById('modalStatus').value = b.status;
+        document.getElementById('modalReadyQty').value = b.readyQty;
+        document.getElementById('modalPenQty').value = b.penQty;
+        document.getElementById('modalFilledQty').value = b.filledQty;
+        document.getElementById('modalRemarks').value = b.remarks || '';
+      } else {
+        title.textContent = 'Add New Batch to Stock Register';
+        document.getElementById('editBatchId').value = '';
+        document.getElementById('modalStrength').value = 'Tizma 2.5 mg';
+        document.getElementById('modalBatchNo').value = '';
+        document.getElementById('modalQuantity').value = '';
+        document.getElementById('modalStatus').value = 'Ready for delivery';
+        document.getElementById('modalReadyQty').value = 0;
+        document.getElementById('modalPenQty').value = 0;
+        document.getElementById('modalFilledQty').value = 0;
+        document.getElementById('modalRemarks').value = '';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeBatchModal() {
+      document.getElementById('batchModal').classList.add('hidden');
+    }
+
+    function syncQuantitiesFromStatus() {
+      const qty = Number(document.getElementById('modalQuantity').value) || 0;
+      const status = document.getElementById('modalStatus').value;
+
+      if (status === 'Ready for delivery') {
+        document.getElementById('modalReadyQty').value = qty;
+        document.getElementById('modalPenQty').value = 0;
+        document.getElementById('modalFilledQty').value = 0;
+      } else if (status === 'Filled') {
+        document.getElementById('modalReadyQty').value = 0;
+        document.getElementById('modalPenQty').value = 0;
+        document.getElementById('modalFilledQty').value = qty;
+      } else if (status === 'Pen') {
+        document.getElementById('modalReadyQty').value = 0;
+        document.getElementById('modalPenQty').value = qty;
+        document.getElementById('modalFilledQty').value = 0;
+      } else {
+        document.getElementById('modalReadyQty').value = 0;
+        document.getElementById('modalPenQty').value = 0;
+        document.getElementById('modalFilledQty').value = 0;
+      }
+    }
+
+    function saveBatchForm(e) {
+      e.preventDefault();
+      const id = document.getElementById('editBatchId').value;
+      const strength = document.getElementById('modalStrength').value.trim();
+      const batchNo = document.getElementById('modalBatchNo').value.trim();
+      const quantity = Number(document.getElementById('modalQuantity').value) || 0;
+      const status = document.getElementById('modalStatus').value;
+      const readyQty = Number(document.getElementById('modalReadyQty').value) || 0;
+      const penQty = Number(document.getElementById('modalPenQty').value) || 0;
+      const filledQty = Number(document.getElementById('modalFilledQty').value) || 0;
+      const remarks = document.getElementById('modalRemarks').value.trim();
+
+      if (id) {
+        const idx = appState.batches.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          appState.batches[idx] = { id, strength, batchNo, quantity, readyQty, penQty, filledQty, status, remarks };
+          showToast(`Batch ${batchNo} updated successfully`);
+        }
+      } else {
+        appState.batches.push({
+          id: 'b_' + Date.now(),
+          strength,
+          batchNo,
+          quantity,
+          readyQty,
+          penQty,
+          filledQty,
+          status,
+          remarks
+        });
+        showToast(`New batch ${batchNo} added`);
+      }
+
+      closeBatchModal();
+      saveState();
+    }
+
+    function confirmDeleteBatch(id) {
+      const b = appState.batches.find(x => x.id === id);
+      if (!b) return;
+      openConfirmDialog(
+        'Delete Batch?',
+        `Are you sure you want to remove Batch ${b.batchNo} (${b.strength}) from the stock register?`,
+        () => {
+          appState.batches = appState.batches.filter(x => x.id !== id);
+          saveState();
+          showToast(`Batch ${b.batchNo} deleted`);
+        }
+      );
+    }
+
+    function shareRegisterWhatsApp() {
+      shareSummaryWhatsApp();
+    }
+
+    // ==================== DELIVERY CHALLAN & AUTO STOCK REDUCTION ====================
+    function renderChallanDropdown() {
+      const select = document.getElementById('challanBatchSelect');
+      const dateInput = document.getElementById('challanDate');
+      if (!dateInput.value) {
+        dateInput.value = new Date().toISOString().slice(0, 10);
+      }
+
+      const sorted = [...appState.batches].sort((a, b) => getStrengthOrderWeight(a.strength) - getStrengthOrderWeight(b.strength));
+      select.innerHTML = sorted.map(b => {
+        return `<option value="${b.id}">${escapeHtml(b.strength)} — Batch ${escapeHtml(b.batchNo)} (Stock: ${Number(b.quantity).toLocaleString()} pcs)</option>`;
+      }).join('');
+
+      updateChallanAvailableHint();
+    }
+
+    function updateChallanAvailableHint() {
+      const batchId = document.getElementById('challanBatchSelect').value;
+      const b = appState.batches.find(x => x.id === batchId);
+      const hint = document.getElementById('challanAvailableHint');
+      if (b) {
+        hint.textContent = `Available: ${Number(b.quantity).toLocaleString()} pcs (Ready: ${Number(b.readyQty).toLocaleString()}, Filled: ${Number(b.filledQty).toLocaleString()})`;
+      } else {
+        hint.textContent = '';
+      }
+    }
+
+    function previewChallanUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // Compress image on canvas so localStorage stays fast and lightweight on mobile
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const maxDim = 900;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          currentUploadedChallanDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+
+          document.getElementById('challanUploadPreviewImg').src = currentUploadedChallanDataUrl;
+          document.getElementById('challanUploadPreviewWrap').classList.remove('hidden');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleChallanSubmit(e) {
+      e.preventDefault();
+      const date = document.getElementById('challanDate').value;
+      const challanNo = document.getElementById('challanNumber').value.trim();
+      const batchId = document.getElementById('challanBatchSelect').value;
+      const qtyToDeduct = Number(document.getElementById('challanQty').value) || 0;
+      const remarks = document.getElementById('challanRemarks').value.trim();
+
+      const batch = appState.batches.find(x => x.id === batchId);
+      if (!batch) {
+        showToast('Please select a valid batch.', 'error');
+        return;
+      }
+
+      if (qtyToDeduct <= 0 || qtyToDeduct > Number(batch.quantity)) {
+        showToast(`Invalid quantity. Available stock for Batch ${batch.batchNo} is ${batch.quantity} pcs.`, 'error');
+        return;
+      }
+
+      // Automatic Stock Deduction logic
+      batch.quantity = Math.max(0, Number(batch.quantity) - qtyToDeduct);
+
+      // Deduct from Ready for Delivery first, then Filled, then Pen
+      let remaining = qtyToDeduct;
+      if (batch.readyQty > 0) {
+        const takeReady = Math.min(batch.readyQty, remaining);
+        batch.readyQty -= takeReady;
+        remaining -= takeReady;
+      }
+      if (remaining > 0 && batch.filledQty > 0) {
+        const takeFilled = Math.min(batch.filledQty, remaining);
+        batch.filledQty -= takeFilled;
+        remaining -= takeFilled;
+      }
+      if (remaining > 0 && batch.penQty > 0) {
+        const takePen = Math.min(batch.penQty, remaining);
+        batch.penQty -= takePen;
+        remaining -= takePen;
+      }
+
+      // Archive Challan Record
+      appState.challans.unshift({
+        id: 'ch_' + Date.now(),
+        date,
+        challanNo,
+        batchId: batch.id,
+        strength: batch.strength,
+        batchNo: batch.batchNo,
+        deductedQty: qtyToDeduct,
+        remarks,
+        imageDataUrl: currentUploadedChallanDataUrl || ''
+      });
+
+      // Reset Form
+      document.getElementById('challanNumber').value = '';
+      document.getElementById('challanQty').value = '';
+      document.getElementById('challanRemarks').value = '';
+      document.getElementById('challanImageInput').value = '';
+      document.getElementById('challanUploadPreviewWrap').classList.add('hidden');
+      currentUploadedChallanDataUrl = '';
+
+      saveState();
+      showToast(`Challan ${challanNo} saved! ${qtyToDeduct.toLocaleString()} pcs automatically deducted.`);
+    }
+
+    function renderChallanList() {
+      const tbody = document.getElementById('challan-tbody');
+      document.getElementById('challan-count-badge').textContent = `${appState.challans.length} Records`;
+
+      if (appState.challans.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 text-xs">No delivery challans recorded yet. Create one above to auto-deduct stock.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = appState.challans.map(ch => {
+        const imgHtml = ch.imageDataUrl
+          ? `<button onclick="viewArchivedChallanImage('${ch.id}')" class="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs px-2.5 py-1 rounded-lg border border-blue-200">
+               <i data-lucide="image" class="w-3.5 h-3.5"></i>
+               <span>View Image</span>
+             </button>`
+          : `<span class="text-xs text-slate-400">No image</span>`;
+
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="py-3 px-3 whitespace-nowrap font-medium text-slate-700">${escapeHtml(ch.date)}</td>
+            <td class="py-3 px-3 font-bold text-slate-900">${escapeHtml(ch.challanNo)}</td>
+            <td class="py-3 px-3 text-xs">
+              <div class="font-semibold text-slate-900">${escapeHtml(ch.strength)}</div>
+              <div class="text-slate-500">Batch: ${escapeHtml(ch.batchNo)}</div>
+            </td>
+            <td class="py-3 px-3 text-right font-bold text-rose-700">-${Number(ch.deductedQty).toLocaleString()} pcs</td>
+            <td class="py-3 px-3">${imgHtml}</td>
+            <td class="py-3 px-3 text-xs text-slate-600">${escapeHtml(ch.remarks || '—')}</td>
+            <td class="py-3 px-3 text-center whitespace-nowrap no-print">
+              <button onclick="shareSingleChallanWhatsApp('${ch.id}')" class="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 mr-1" title="Share on WhatsApp">
+                <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="confirmDeleteChallan('${ch.id}')" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700" title="Delete Challan">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function viewArchivedChallanImage(challanId) {
+      const ch = appState.challans.find(x => x.id === challanId);
+      if (!ch || !ch.imageDataUrl) return;
+      lastGeneratedImageDataUrl = ch.imageDataUrl;
+      document.getElementById('generatedGalleryImage').src = ch.imageDataUrl;
+      const link = document.getElementById('directDownloadPngLink');
+      link.href = ch.imageDataUrl;
+      link.download = `Challan_${ch.challanNo}.jpg`;
+      document.getElementById('imagePreviewModal').classList.remove('hidden');
+    }
+
+    function shareSingleChallanWhatsApp(challanId) {
+      const ch = appState.challans.find(x => x.id === challanId);
+      if (!ch) return;
+      const text = `*DELIVERY CHALLAN*\nDate: ${ch.date}\nChallan No: *${ch.challanNo}*\nProduct: ${ch.strength}\nBatch No: *${ch.batchNo}*\nDelivered Qty: *${Number(ch.deductedQty).toLocaleString()} pcs*\nRemarks: ${ch.remarks || 'N/A'}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    }
+
+    function confirmDeleteChallan(challanId) {
+      const ch = appState.challans.find(x => x.id === challanId);
+      if (!ch) return;
+      openConfirmDialog(
+        'Delete Delivery Challan?',
+        `Delete Challan ${ch.challanNo}? Note: You can manually adjust batch stock in the Stock Register if needed.`,
+        () => {
+          appState.challans = appState.challans.filter(x => x.id !== challanId);
+          saveState();
+          showToast(`Challan ${ch.challanNo} removed from archive.`);
+        }
+      );
+    }
+
+    function exportChallansJSON() {
+      const blob = new Blob([JSON.stringify(appState.challans, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Tizma_Delivery_Challans_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Challan archive exported!');
+    }
+
+    // ==================== HIDDEN CODE AUTHORIZATION ====================
+    function autoCalculateStickers() {
+      const first = Number(document.getElementById('hcFirstSerial').value);
+      const last = Number(document.getElementById('hcLastSerial').value);
+      const gap = Number(document.getElementById('hcGap').value) || 0;
+
+      if (!isNaN(first) && !isNaN(last) && last >= first && first > 0) {
+        const used = Math.max(0, (last - first + 1) - gap);
+        document.getElementById('hcTotalUsed').value = used;
+      }
+    }
+
+    function handleHiddenCodeSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('hcEditId').value;
+      const entry = {
+        id: editId || 'hc_' + Date.now(),
+        strength: document.getElementById('hcStrength').value.trim(),
+        batchNo: document.getElementById('hcBatch').value.trim(),
+        firstCode: document.getElementById('hcFirstCode').value.trim(),
+        lastCode: document.getElementById('hcLastCode').value.trim(),
+        firstSerial: Number(document.getElementById('hcFirstSerial').value) || 0,
+        lastSerial: Number(document.getElementById('hcLastSerial').value) || 0,
+        gap: Number(document.getElementById('hcGap').value) || 0,
+        totalUsed: Number(document.getElementById('hcTotalUsed').value) || 0
+      };
+
+      if (editId) {
+        const idx = appState.hiddenCodes.findIndex(x => x.id === editId);
+        if (idx !== -1) appState.hiddenCodes[idx] = entry;
+        showToast('Hidden Code Authorization updated');
+      } else {
+        appState.hiddenCodes.unshift(entry);
+        showToast('Hidden Code Authorization saved');
+      }
+
+      resetHiddenCodeForm();
+      saveState();
+    }
+
+    function editHiddenCode(id) {
+      const item = appState.hiddenCodes.find(x => x.id === id);
+      if (!item) return;
+      document.getElementById('hcFormTitle').textContent = `Edit Authorization (${item.batchNo})`;
+      document.getElementById('hcEditId').value = item.id;
+      document.getElementById('hcStrength').value = item.strength;
+      document.getElementById('hcBatch').value = item.batchNo;
+      document.getElementById('hcFirstCode').value = item.firstCode;
+      document.getElementById('hcLastCode').value = item.lastCode;
+      document.getElementById('hcFirstSerial').value = item.firstSerial;
+      document.getElementById('hcLastSerial').value = item.lastSerial;
+      document.getElementById('hcGap').value = item.gap;
+      document.getElementById('hcTotalUsed').value = item.totalUsed;
+      document.getElementById('hcCancelEditBtn').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetHiddenCodeForm() {
+      document.getElementById('hcFormTitle').textContent = 'Add Hidden Code Authorization Record';
+      document.getElementById('hiddenCodeForm').reset();
+      document.getElementById('hcEditId').value = '';
+      document.getElementById('hcGap').value = 0;
+      document.getElementById('hcCancelEditBtn').classList.add('hidden');
+    }
+
+    function confirmDeleteHiddenCode(id) {
+      openConfirmDialog('Delete Authorization Record?', 'Remove this Hidden Code Authorization entry?', () => {
+        appState.hiddenCodes = appState.hiddenCodes.filter(x => x.id !== id);
+        saveState();
+        showToast('Authorization entry deleted');
+      });
+    }
+
+    function renderHiddenCodesTable() {
+      const tbody = document.getElementById('hiddencode-tbody');
+      if (appState.hiddenCodes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-500 text-xs">No Hidden Code Authorization records yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = appState.hiddenCodes.map(hc => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-3 px-3 font-semibold text-slate-900 whitespace-nowrap">${escapeHtml(hc.strength)}</td>
+          <td class="py-3 px-3 font-mono font-bold text-slate-800">${escapeHtml(hc.batchNo)}</td>
+          <td class="py-3 px-3 font-mono text-xs text-slate-700">${escapeHtml(hc.firstCode)}</td>
+          <td class="py-3 px-3 font-mono text-xs text-slate-700">${escapeHtml(hc.lastCode)}</td>
+          <td class="py-3 px-3 text-right font-medium">${Number(hc.firstSerial).toLocaleString()}</td>
+          <td class="py-3 px-3 text-right font-medium">${Number(hc.lastSerial).toLocaleString()}</td>
+          <td class="py-3 px-3 text-right font-semibold text-amber-700">${Number(hc.gap).toLocaleString()}</td>
+          <td class="py-3 px-3 text-right font-bold text-emerald-700">${Number(hc.totalUsed).toLocaleString()}</td>
+          <td class="py-3 px-3 text-center whitespace-nowrap no-print">
+            <button onclick="editHiddenCode('${hc.id}')" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 mr-1" title="Edit">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="confirmDeleteHiddenCode('${hc.id}')" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700" title="Delete">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function shareHiddenCodesWhatsApp() {
+      let text = `*HIDDEN CODE AUTHORIZATION REPORT*\n------------------------\n`;
+      appState.hiddenCodes.forEach(hc => {
+        text += `• *${hc.strength}* | Batch: *${hc.batchNo}*\n`;
+        text += `  Codes: ${hc.firstCode} to ${hc.lastCode}\n`;
+        text += `  Serials: ${hc.firstSerial} - ${hc.lastSerial} (Gap: ${hc.gap})\n`;
+        text += `  Total Sticker Used: *${hc.totalUsed}*\n\n`;
+      });
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    }
+
+    // ==================== GLOBAL MULTI-FIELD SEARCH ====================
+    function triggerHomeSearch() {
+      const q = document.getElementById('homeQuickSearch').value.trim();
+      navigateTo('search');
+      const searchInput = document.getElementById('globalSearchInput');
+      searchInput.value = q;
+      runGlobalSearch();
+    }
+
+    function runGlobalSearch() {
+      const q = document.getElementById('globalSearchInput').value.trim().toLowerCase();
+      const container = document.getElementById('globalSearchResults');
+
+      if (!q) {
+        container.innerHTML = `<div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-500">Enter a Batch Number, Strength (e.g., 2.5 mg), Hidden Code, Serial Number, or Challan Number to search across all ERP records.</div>`;
+        return;
+      }
+
+      const matchedBatches = appState.batches.filter(b =>
+        b.batchNo.toLowerCase().includes(q) ||
+        b.strength.toLowerCase().includes(q) ||
+        b.status.toLowerCase().includes(q) ||
+        (b.remarks && b.remarks.toLowerCase().includes(q))
+      );
+
+      const matchedChallans = appState.challans.filter(ch =>
+        ch.challanNo.toLowerCase().includes(q) ||
+        ch.batchNo.toLowerCase().includes(q) ||
+        ch.strength.toLowerCase().includes(q) ||
+        ch.date.includes(q) ||
+        (ch.remarks && ch.remarks.toLowerCase().includes(q))
+      );
+
+      const matchedCodes = appState.hiddenCodes.filter(hc =>
+        hc.batchNo.toLowerCase().includes(q) ||
+        hc.strength.toLowerCase().includes(q) ||
+        hc.firstCode.toLowerCase().includes(q) ||
+        hc.lastCode.toLowerCase().includes(q) ||
+        String(hc.firstSerial).includes(q) ||
+        String(hc.lastSerial).includes(q)
+      );
+
+      let html = '';
+
+      // 1. Stock Register Matches
+      html += `<div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+        <h3 class="text-xs font-bold uppercase text-slate-500 mb-2.5">Stock Register Matches (${matchedBatches.length})</h3>`;
+      if (matchedBatches.length) {
+        html += `<div class="divide-y divide-slate-100">` + matchedBatches.map(b => `
+          <div class="py-2.5 flex items-center justify-between gap-2">
+            <div>
+              <span class="font-bold text-sm text-slate-900">${escapeHtml(b.strength)}</span>
+              <span class="ml-2 text-xs font-mono bg-slate-100 px-2 py-0.5 rounded font-semibold">Batch: ${escapeHtml(b.batchNo)}</span>
+              <div class="text-xs text-slate-500 mt-0.5">Qty: <strong>${Number(b.quantity).toLocaleString()} pcs</strong> • Status: ${escapeHtml(b.status)}</div>
+            </div>
+            <button onclick="navigateTo('register'); openBatchModal('${b.id}')" class="text-xs font-semibold bg-slate-900 text-white px-3 py-1.5 rounded-lg">Edit</button>
+          </div>
+        `).join('') + `</div>`;
+      } else {
+        html += `<p class="text-xs text-slate-400">No matching batches in Stock Register.</p>`;
+      }
+      html += `</div>`;
+
+      // 2. Hidden Code Matches
+      html += `<div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+        <h3 class="text-xs font-bold uppercase text-slate-500 mb-2.5">Hidden Code & Serial Matches (${matchedCodes.length})</h3>`;
+      if (matchedCodes.length) {
+        html += `<div class="divide-y divide-slate-100">` + matchedCodes.map(hc => `
+          <div class="py-2.5 flex items-center justify-between gap-2">
+            <div>
+              <span class="font-bold text-sm text-slate-900">${escapeHtml(hc.strength)} — Batch ${escapeHtml(hc.batchNo)}</span>
+              <div class="text-xs text-slate-600 mt-0.5">Hidden Codes: <strong>${escapeHtml(hc.firstCode)}</strong> to <strong>${escapeHtml(hc.lastCode)}</strong></div>
+              <div class="text-xs text-slate-500">Serials: ${hc.firstSerial} – ${hc.lastSerial} | Used: <strong>${hc.totalUsed}</strong></div>
+            </div>
+            <button onclick="navigateTo('hiddencode')" class="text-xs font-semibold bg-purple-50 text-purple-800 border border-purple-200 px-3 py-1.5 rounded-lg">Open</button>
+          </div>
+        `).join('') + `</div>`;
+      } else {
+        html += `<p class="text-xs text-slate-400">No matching hidden codes or serial numbers.</p>`;
+      }
+      html += `</div>`;
+
+      // 3. Delivery Challan Matches
+      html += `<div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+        <h3 class="text-xs font-bold uppercase text-slate-500 mb-2.5">Delivery Challan Matches (${matchedChallans.length})</h3>`;
+      if (matchedChallans.length) {
+        html += `<div class="divide-y divide-slate-100">` + matchedChallans.map(ch => `
+          <div class="py-2.5 flex items-center justify-between gap-2">
+            <div>
+              <span class="font-bold text-sm text-slate-900">Challan #${escapeHtml(ch.challanNo)}</span>
+              <span class="ml-2 text-xs text-slate-500">${escapeHtml(ch.date)}</span>
+              <div class="text-xs text-slate-600 mt-0.5">${escapeHtml(ch.strength)} (Batch ${escapeHtml(ch.batchNo)}) • Deducted: <strong>${ch.deductedQty} pcs</strong></div>
+            </div>
+            <button onclick="navigateTo('challan')" class="text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-lg">View</button>
+          </div>
+        `).join('') + `</div>`;
+      } else {
+        html += `<p class="text-xs text-slate-400">No matching delivery challans.</p>`;
+      }
+      html += `</div>`;
+
+      container.innerHTML = html;
+    }
+
+    // ==================== BACKUP, RESTORE & RESET ====================
+    function downloadFullBackup() {
+      const backupPayload = {
+        app: 'Tizma Web ERP',
+        exportedAt: new Date().toISOString(),
+        data: appState
+      };
+      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tizma_erp_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Full ERP backup downloaded to your device!');
+    }
+
+    function restoreFullBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          const restoredData = parsed.data ? parsed.data : parsed;
+          if (!Array.isArray(restoredData.batches)) {
+            throw new Error('Invalid backup structure');
+          }
+          appState.batches = restoredData.batches;
+          appState.challans = Array.isArray(restoredData.challans) ? restoredData.challans : [];
+          appState.hiddenCodes = Array.isArray(restoredData.hiddenCodes) ? restoredData.hiddenCodes : [];
+          saveState();
+          showToast('Backup restored successfully!');
+          navigateTo('home');
+        } catch (err) {
+          showToast('Invalid backup file. Please choose a valid Tizma ERP JSON backup.', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function openResetConfirmModal() {
+      openConfirmDialog(
+        'Reset to Default Tizma Stock?',
+        'This will restore the initial Tizma 2.5 mg – 15 mg reference batches and clear custom entries. Download a backup first if needed.',
+        () => {
+          appState.batches = JSON.parse(JSON.stringify(DEFAULT_STOCK_DATA));
+          appState.challans = [];
+          appState.hiddenCodes = JSON.parse(JSON.stringify(DEFAULT_HIDDEN_CODES));
+          saveState();
+          showToast('Default Tizma stock sheet restored.');
+          navigateTo('home');
+        }
+      );
+    }
+
+    // ==================== SECURITY HELPER ====================
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Boot Application
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      refreshAllViews();
+    });
+  </script>
+</body>
+</html>
+```
